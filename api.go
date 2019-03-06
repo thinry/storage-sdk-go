@@ -1,4 +1,4 @@
-package sdk
+package api
 
 import (
 	"bytes"
@@ -33,9 +33,9 @@ func NewApi(host, userName, password string) (*API, error) {
 		return nil, fmt.Errorf("host must be not nil")
 	}
 
-	client := API{host, ""}
+	client := API{host:host}
 
-	token, err := client.GetToken(&GetToken{UserName: userName, Password: password})
+	token, err := client.getToken(&GetToken{UserName: userName, Password: password})
 	if err != nil {
 		return nil, err
 	}
@@ -57,20 +57,20 @@ type ErrorToken struct {
 	AuthUrl string
 }
 
-func (api *API) PostJson(url string, input interface{}, ret interface{}) error {
+func (api *API) postJson(url string, input interface{}, ret interface{}) error {
 
 	return api.execute("POST", "application/json;charset=utf-8", url, input, ret)
 }
 
-func (api *API) DeleteJson(url string, input interface{}, ret interface{}) error {
+func (api *API) deleteJson(url string, input interface{}, ret interface{}) error {
 
 	return api.execute("DELETE", "application/json;charset=utf-8", url, input, ret)
 }
-func (api *API) PutJson(url string, input interface{}, ret interface{}) error {
+func (api *API) putJson(url string, input interface{}, ret interface{}) error {
 	return api.execute("PUT", "application/json;charset=utf-8", url, input, ret)
 }
 
-func (api *API) GetJson(apiUrl string, ret interface{}) error {
+func (api *API) getJson(apiUrl string, ret interface{}) error {
 
 	client := &http.Client{}
 
@@ -115,7 +115,7 @@ func (api *API) GetJson(apiUrl string, ret interface{}) error {
 	return err
 }
 
-func (api *API) PostFile(apiUrl, file string, ret interface{}) error {
+func (api *API) postFile(apiUrl, file string, ret interface{}) error {
 
 	bodyBuf := &bytes.Buffer{}
 	bodyWriter := multipart.NewWriter(bodyBuf)
@@ -258,7 +258,7 @@ type Token struct {
 // Get token by user name and password
 // @Password
 // @UserName
-func (api *API) GetToken(conf *GetToken) (*Token, error) {
+func (api *API) getToken(conf *GetToken) (*Token, error) {
 	if conf.Password == "" {
 		return nil, errors.New("password field is required")
 	}
@@ -266,7 +266,7 @@ func (api *API) GetToken(conf *GetToken) (*Token, error) {
 		return nil, errors.New("UserName field is required")
 	}
 	var ret Token
-	err := api.PostJson("/token", conf, &ret)
+	err := api.postJson("/token", conf, &ret)
 	return &ret, err
 }
 
@@ -335,7 +335,7 @@ type Object struct {
 func (api *API) ListObject(bucketName, marker, prefix, delimiter, maxKeys string) (*ListObjectsOutput, error) {
 
 	var ret ListObjectsOutput
-	err := api.GetJson(fmt.Sprintf("/api/v1/buckets/%s/objects?marker=%s&prefix=%s&delimiter=%s&maxKeys=%s", bucketName, marker, prefix, delimiter, maxKeys), &ret)
+	err := api.getJson(fmt.Sprintf("/api/v1/buckets/%s/objects?marker=%s&prefix=%s&delimiter=%s&maxKeys=%s", bucketName, marker, prefix, delimiter, maxKeys), &ret)
 	return &ret, err
 }
 
@@ -371,7 +371,7 @@ func (api *API) CreateUserKeyForUser(conf *KeyConfig) (*Message, error) {
 		return nil, errors.New("UserId field is required")
 	}
 	var ret Message
-	err := api.PostJson("/api/v1/admin/users/keys", conf, &ret)
+	err := api.postJson("/api/v1/admin/users/keys", conf, &ret)
 	return &ret, err
 }
 
@@ -386,7 +386,7 @@ func (api *API) CreateUserKeyForUser(conf *KeyConfig) (*Message, error) {
 // Additionally, only one swift key may be held by each user or subuser.
 func (api *API) CreateUserKey(conf *KeyConfig) (*Message, error) {
 	var ret Message
-	err := api.PostJson("/api/v1/keys", conf, &ret)
+	err := api.postJson("/api/v1/keys", conf, &ret)
 	return &ret, err
 }
 
@@ -418,7 +418,7 @@ type UserKey struct {
 // user info
 func (api *API) GetUserByToken() (*User, error) {
 	var ret User
-	err := api.GetJson("/api/v1/users", &ret)
+	err := api.getJson("/api/v1/users", &ret)
 	return &ret, err
 }
 
@@ -436,7 +436,7 @@ type UserList struct {
 //@pageSize required false
 func (api *API) GetUsers(userName *string, page, pageSize *int) (*UserList, error) {
 	var ret UserList
-	err := api.GetJson(fmt.Sprintf("/api/v1/admin/users?userName=%s&page=%d&pageSize=%d", userName, page, pageSize), &ret)
+	err := api.getJson(fmt.Sprintf("/api/v1/admin/users?userName=%s&page=%d&pageSize=%d", userName, page, pageSize), &ret)
 	return &ret, err
 }
 
@@ -457,7 +457,7 @@ type Quotas struct {
 // GetQuotas
 func (api *API) GetQuotas(userId *string) (*Quotas, error) {
 	var ret Quotas
-	err := api.GetJson(fmt.Sprintf("/api/v1/admin/users/%s/quotas", *userId), &ret)
+	err := api.getJson(fmt.Sprintf("/api/v1/admin/users/%s/quotas", *userId), &ret)
 	return &ret, err
 }
 
@@ -475,7 +475,7 @@ type QuotaParam struct {
 // PutQuotas
 func (api *API) PutQuotas(userId string, input *QuotaParam) (*Message, error) {
 	var ret Message
-	err := api.PutJson(fmt.Sprintf("/api/v1/admin/users/%s/quotas", userId), input, &ret)
+	err := api.putJson(fmt.Sprintf("/api/v1/admin/users/%s/quotas", userId), input, &ret)
 	return &ret, err
 }
 
@@ -507,7 +507,7 @@ type Stats struct {
 // GetBucketInfo
 func (api *API) GetBucketInfo(bucketName string) (*Stats, error) {
 	var ret Stats
-	err := api.GetJson(fmt.Sprintf("/api/v1/buckets/%s/info", bucketName), &ret)
+	err := api.getJson(fmt.Sprintf("/api/v1/buckets/%s/info", bucketName), &ret)
 	return &ret, err
 }
 
@@ -553,7 +553,7 @@ type CreateBucketConfiguration struct {
 // AddBuckets
 func (api *API) CreateBuckets(input *CreateBucketInput) (*Message, error) {
 	var ret Message
-	err := api.PostJson("/api/v1/buckets", input, &ret)
+	err := api.postJson("/api/v1/buckets", input, &ret)
 	return &ret, err
 }
 
@@ -612,7 +612,7 @@ type Owner struct {
 // GetBucketAcl
 func (api *API) GetBucketAcl(bucketName string) (*GetBucketAclOutput, error) {
 	var ret GetBucketAclOutput
-	err := api.GetJson(fmt.Sprintf("/api/v1/buckets/%s/acl", bucketName), &ret)
+	err := api.getJson(fmt.Sprintf("/api/v1/buckets/%s/acl", bucketName), &ret)
 	return &ret, err
 }
 
@@ -625,14 +625,14 @@ type PutBucketAclOutputParam struct {
 //PutObjectAcl
 func (api *API) PutObjectAcl(input *PutBucketAclOutputParam, bucketName, objectName string) (*Message, error) {
 	var ret Message
-	err := api.PutJson(fmt.Sprintf("/api/v1/buckets/%s/object/acl?objectName=%s", bucketName, objectName), input, &ret)
+	err := api.putJson(fmt.Sprintf("/api/v1/buckets/%s/object/acl?objectName=%s", bucketName, objectName), input, &ret)
 	return &ret, err
 }
 
 // PutBucketAcl
 func (api *API) PutBucketAcl(input *PutBucketAclOutputParam, bucketName string) (*Message, error) {
 	var ret Message
-	err := api.PutJson(fmt.Sprintf("/api/v1/buckets/%s/acl", bucketName), input, &ret)
+	err := api.putJson(fmt.Sprintf("/api/v1/buckets/%s/acl", bucketName), input, &ret)
 	return &ret, err
 }
 
@@ -683,7 +683,7 @@ func (api *API) PutObject(bucketName string, input *PutObjectInput) (*PutObjectO
 	var ret PutObjectOutput
 	oName := base64.URLEncoding.EncodeToString([]byte(input.ObjectName))
 
-	err := api.PostFile(fmt.Sprintf("/api/v1/buckets/%s/object/api?objectName="+oName, bucketName), input.FilePath, &ret)
+	err := api.postFile(fmt.Sprintf("/api/v1/buckets/%s/object/api?objectName="+oName, bucketName), input.FilePath, &ret)
 	return &ret, err
 }
 
@@ -696,7 +696,7 @@ type ObjectCopyParam struct {
 
 func (api *API) CopyObject(bucketName string, input *ObjectCopyParam) (*Message, error) {
 	var ret Message
-	err := api.PutJson(fmt.Sprintf("/api/v1/buckets/%s/object", bucketName), input, &ret)
+	err := api.putJson(fmt.Sprintf("/api/v1/buckets/%s/object", bucketName), input, &ret)
 	return &ret, err
 }
 
@@ -710,7 +710,7 @@ type ObjectRenameParam struct {
 // @description The previous version number is lost after renaming, and the old object is deleted, ensuring that the new objectName entered is the same as the source
 func (api *API) RenameObject(bucketName string, input *ObjectRenameParam) (*Message, error) {
 	var ret Message
-	err := api.PutJson(fmt.Sprintf("/api/v1/buckets/%s/object/name", bucketName), input, &ret)
+	err := api.putJson(fmt.Sprintf("/api/v1/buckets/%s/object/name", bucketName), input, &ret)
 	return &ret, err
 }
 
@@ -877,7 +877,7 @@ type ObjectInfoResult struct {
 // get object info
 func (api *API) HeaderObject(bucketName string, input *HeadObjectParam) (*ObjectInfoResult, error) {
 	var ret ObjectInfoResult
-	err := api.PostJson(fmt.Sprintf("/api/v1/buckets/%s/object/info", bucketName), input, &ret)
+	err := api.postJson(fmt.Sprintf("/api/v1/buckets/%s/object/info", bucketName), input, &ret)
 	return &ret, err
 }
 
@@ -888,7 +888,7 @@ func (api *API) HeaderObject(bucketName string, input *HeadObjectParam) (*Object
 //@expire Validity minutes
 func (api *API) GetObjectUrl(bucketName, objectName, version string, expire int) (*ObjectUrl, error) {
 	var ret ObjectUrl
-	err := api.GetJson(fmt.Sprintf("/api/v1/buckets/%s/object/url?objectName=%s&version=%s&expire=%d", bucketName, objectName, version, expire), &ret)
+	err := api.getJson(fmt.Sprintf("/api/v1/buckets/%s/object/url?objectName=%s&version=%s&expire=%d", bucketName, objectName, version, expire), &ret)
 	return &ret, err
 }
 
@@ -899,7 +899,7 @@ type ObjectUrl struct {
 
 func (api *API) DeleteUser(userId string) (*Message, error) {
 	var ret Message
-	err := api.DeleteJson(fmt.Sprintf("/api/v1/admin/users/%s", userId), nil, &ret)
+	err := api.deleteJson(fmt.Sprintf("/api/v1/admin/users/%s", userId), nil, &ret)
 	return &ret, err
 }
 
@@ -920,7 +920,7 @@ type PutBucketVersionParam struct {
 //PutBucketVersion
 func (api *API) PutBucketVersion(bucketName string, input *PutBucketVersionParam) (*Message, error) {
 	var ret Message
-	err := api.PutJson(fmt.Sprintf("/api/v1/buckets/%s/version", bucketName), input, &ret)
+	err := api.putJson(fmt.Sprintf("/api/v1/buckets/%s/version", bucketName), input, &ret)
 	return &ret, err
 }
 
@@ -1123,7 +1123,7 @@ type Tag struct {
 //}
 func (api *API) PutBucketLifecycleConfiguration(bucketName string, input *PutBucketLifecycleConfigurationParam) (*Message, error) {
 	var ret Message
-	err := api.PutJson(fmt.Sprintf("/api/v1/buckets/%s/lifecycle", bucketName), input, &ret)
+	err := api.putJson(fmt.Sprintf("/api/v1/buckets/%s/lifecycle", bucketName), input, &ret)
 	return &ret, err
 }
 
@@ -1136,14 +1136,14 @@ type ObjectDeleteParam struct {
 //@ObjectName required true
 func (api *API) DeleteObject(bucketName string, input *ObjectDeleteParam) (*Message, error) {
 	var ret Message
-	err := api.DeleteJson(fmt.Sprintf("/api/v1/buckets/%s/object", bucketName), input, &ret)
+	err := api.deleteJson(fmt.Sprintf("/api/v1/buckets/%s/object", bucketName), input, &ret)
 	return &ret, err
 }
 
 //@bucketName required true
 func (api *API) DeleteBucket(bucketName string) (*Message, error) {
 	var ret Message
-	err := api.DeleteJson(fmt.Sprintf("/api/v1/buckets/%s", bucketName), nil, &ret)
+	err := api.deleteJson(fmt.Sprintf("/api/v1/buckets/%s", bucketName), nil, &ret)
 	return &ret, err
 }
 
@@ -1151,6 +1151,6 @@ func (api *API) DeleteBucket(bucketName string) (*Message, error) {
 //@keyId required true
 func (api *API) DeleteUserKeyForUser(userId, keyId string) (*Message, error) {
 	var ret Message
-	err := api.DeleteJson(fmt.Sprintf("/api/v1/admin/users/%s/keys/%s", userId, keyId), nil, &ret)
+	err := api.deleteJson(fmt.Sprintf("/api/v1/admin/users/%s/keys/%s", userId, keyId), nil, &ret)
 	return &ret, err
 }
