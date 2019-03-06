@@ -1,1 +1,1 @@
-# storage-skd-go
+# storage-sdk-go
