@@ -1,0 +1,5 @@
+#build files
+vendor/*/
+*.log
+*.idea
+/mock_service/
