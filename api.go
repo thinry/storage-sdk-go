@@ -33,7 +33,7 @@ func NewApi(host, userName, password string) (*API, error) {
 		return nil, fmt.Errorf("host must be not nil")
 	}
 
-	client := API{host:host}
+	client := API{host: host}
 
 	token, err := client.getToken(&GetToken{UserName: userName, Password: password})
 	if err != nil {
@@ -504,9 +504,14 @@ type Stats struct {
 	Ver string `json:"ver"`
 }
 
+type BucketOut struct {
+	Stats         Stats  `json:"stats"`
+	VersionStatus string `json:"versionStatus"`
+}
+
 // GetBucketInfo
-func (api *API) GetBucketInfo(bucketName string) (*Stats, error) {
-	var ret Stats
+func (api *API) GetBucketInfo(bucketName string) (*BucketOut, error) {
+	var ret BucketOut
 	err := api.getJson(fmt.Sprintf("/api/v1/buckets/%s/info", bucketName), &ret)
 	return &ret, err
 }
@@ -616,6 +621,25 @@ func (api *API) GetBucketAcl(bucketName string) (*GetBucketAclOutput, error) {
 	return &ret, err
 }
 
+type BucketAcl struct {
+	//owner Permission:READ,WRITER,FULL_CONTROL
+	OwnerPermission []string `json:"ownerPermission"`
+	GroupPermission []string `json:"groupPermission"`
+	List            []UidAcl `json:"list"`
+}
+type UidAcl struct {
+	Uid string `json:"uid"`
+	//Permission:READ,WRITER,FULL_CONTROL
+	Permission []string `json:"permission"`
+}
+
+// GetBucketAclWeb
+func (api *API) GetBucketAclWeb(bucketName string) (*BucketAcl, error) {
+	var ret BucketAcl
+	err := api.getJson(fmt.Sprintf("/api/v1/buckets/%s/acl/web", bucketName), &ret)
+	return &ret, err
+}
+
 type PutBucketAclOutputParam struct {
 	AccessControlPolicy *AccessControlPolicy `json:"accessControlPolicy"`
 	//Valid Values: private | public-read | public-read-write | authenticated-read
@@ -633,6 +657,13 @@ func (api *API) PutObjectAcl(input *PutBucketAclOutputParam, bucketName, objectN
 func (api *API) PutBucketAcl(input *PutBucketAclOutputParam, bucketName string) (*Message, error) {
 	var ret Message
 	err := api.putJson(fmt.Sprintf("/api/v1/buckets/%s/acl", bucketName), input, &ret)
+	return &ret, err
+}
+
+// PutBucketAclWeb
+func (api *API) PutBucketAclWeb(input *BucketAcl, bucketName string) (*Message, error) {
+	var ret Message
+	err := api.putJson(fmt.Sprintf("/api/v1/buckets/%s/acl/web", bucketName), input, &ret)
 	return &ret, err
 }
 
@@ -1152,5 +1183,16 @@ func (api *API) DeleteBucket(bucketName string) (*Message, error) {
 func (api *API) DeleteUserKeyForUser(userId, keyId string) (*Message, error) {
 	var ret Message
 	err := api.deleteJson(fmt.Sprintf("/api/v1/admin/users/%s/keys/%s", userId, keyId), nil, &ret)
+	return &ret, err
+}
+
+type Ids struct {
+	IdList []string `json:"idList"`
+}
+
+//@ids required true
+func (api *API) DeleteUserKeysByIds(ids []string) (*Message, error) {
+	var ret Message
+	err := api.deleteJson(fmt.Sprintf("/api/v1/keys"), ids, &ret)
 	return &ret, err
 }
